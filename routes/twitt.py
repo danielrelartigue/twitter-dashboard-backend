@@ -13,6 +13,8 @@ from schemas.user import userEntity
 from datetime import datetime
 from utils.utils import getFirstValue, getValueFromDict
 from starlette.status import HTTP_204_NO_CONTENT, HTTP_404_NOT_FOUND, HTTP_200_OK, HTTP_400_BAD_REQUEST
+from utils.analyze import analyze_tweet_emotions
+from fastapi.encoders import jsonable_encoder
 
 twitt = APIRouter()
 twittsCollection = database['twitts']
@@ -169,3 +171,57 @@ async def getTwittsBetweenDates(startDate: str, endDate: str):
   }).to_list(None)
 
   return twittsEntity(twittsBetweenDates)
+
+# Method to calculate the sentiments of a twitt
+@twitt.get("/calculateTwittAnalysis/{id}", response_model=dict, tags=["twitts"])
+async def calculateTwittAnalysis(id: str):
+
+  twitt_dict = await twittsCollection.find_one({"_id": ObjectId(id)})
+
+  if twitt_dict is None:
+    raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Twitt not found')
+  
+  emotions = analyze_tweet_emotions(getValueFromDict(twitt_dict, 'message'))
+
+  return {"emotions": emotions}
+
+# Method to caculate the max sentiment of a twitt
+@twitt.get("/calculateMaxTwittSentiment/{id}", response_model=str, tags=["twitts"])
+async def calculateMaxTwittSentiment(id: str):
+
+  twitt_dict = await twittsCollection.find_one({"_id": ObjectId(id)})
+
+  if twitt_dict is None:
+    raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Twitt not found')
+  
+  emotions = analyze_tweet_emotions(getValueFromDict(twitt_dict, 'message'))
+
+  return max(emotions, key=emotions.get)
+
+# Method to update the sentiment of a twitt
+@twitt.patch("/recalculateSentiment/{id}", response_model=dict, tags=["twitts"])
+async def recalculateSentiment(id: str):
+
+  # Calculate the new sentiment and score
+  twitt_dict = await twittsCollection.find_one({"_id": ObjectId(id)})
+
+  if twitt_dict is None:
+    raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail='Twitt not found')
+  
+  emotions = analyze_tweet_emotions(getValueFromDict(twitt_dict, 'message'))
+
+  max_emotion = max(emotions, key=emotions.get)
+  max_score = emotions[max_emotion]
+
+  # Update the sentiment with the new values
+  updated_sensibility = await sensibilityCollection.find_one_and_update(
+    {'id_twitt': ObjectId(id)}, # Search by twitt id
+    {'$set': {'sentiment': max_emotion, 'confidence': max_score}},  # Update the fields
+    return_document=True # Return the document updated
+  )
+
+  if not updated_sensibility:
+    raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Twitt sensibility not found')
+  
+  return {'message': 'Sentiment and confidence updated successfully', 'sensibility': sensibilityEntity(updated_sensibility)}
+  
