@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 origins = [
     'http://localhost',
     'http://localhost:3000' # To consume from frontend in local
+    'https://twitter-dashboard-backend-production.up.railway.app'
 ]
 
 # Load environment
