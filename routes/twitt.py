@@ -65,7 +65,7 @@ async def getTwittHashtags(id: str):
   return hashtagsEntity(hashtagsModels)
 
 # Method to get the creation date of a twitt
-@twitt.get("/twittCreationDate/{id}", response_model=Union[str, None], tags=["twitts"])
+@twitt.get("/twittCreationDate/{id}", response_model=Union[datetime, None], tags=["twitts"])
 async def getTwittCreationDate(id: str):
   twitt_dict = await twittsCollection.find_one({"_id": ObjectId(id)})
   
