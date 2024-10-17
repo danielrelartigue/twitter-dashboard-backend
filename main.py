@@ -35,7 +35,8 @@ app.add_middleware(
     allow_origins=origins, # Domines allowed
     allow_credentials=True,
     allow_methods=["*"], # Allow all the HTTP methods
-    allow_headers=["*"] # Allow all the headers
+    allow_headers=["*"], # Allow all the headers
+    expose_headers=["*"]
 )
 
 if __name__ == "__main__":
